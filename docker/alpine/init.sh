@@ -2,40 +2,24 @@
 
 set -e
 
-# Backwards compatibility for old Docker image
-if [ -f "/.filebrowser.json" ]; then
-  ln -s /.filebrowser.json /config/settings.json
-
-  echo ""
-  echo "!!!!!!!!!!!!!!!!!!!!! IMPORTANT INFORMATION !!!!!!!!!!!!!!!!!!!!!"
-  echo "Symlinking /.filebrowser.json to /config/settings.json for backwards compatibility."
-  echo ""
-  echo "The volume mount configuration has changed in the latest release."
-  echo "Please rename .filebrowser.json to settings.json and mount the parent directory to /config".
-  echo "Read more on https://github.com/filebrowser/filebrowser/blob/master/docs/installation.md#docker"
-  echo ""
-  echo "This workaround will be removed in a future release."
-  echo ""
-fi
-
-# Backwards compatibility for old Docker image
-if [ -f "/database.db" ]; then
-  ln -s /database.db /database/filebrowser.db
-  
-  echo ""
-  echo "!!!!!!!!!!!!!!!!!!!!! IMPORTANT INFORMATION !!!!!!!!!!!!!!!!!!!!!"
-  echo ""
-  echo "The volume mount configuration has changed in the latest release."
-  echo "Please rename database.db to filebrowser.db and mount the parent directory to /database".
-  echo "Read more on https://github.com/filebrowser/filebrowser/blob/master/docs/installation.md#docker"
-  echo ""
-  echo "This workaround will be removed in a future release."
-  echo ""
-fi
-
 # Ensure configuration exists
 if [ ! -f "/config/settings.json" ]; then
   cp -a /defaults/settings.json /config/settings.json
 fi
 
-exec "$@"
+# Deal with the case where user does not provide a config argument
+has_config_arg=0
+for arg in "$@"; do
+  case "$arg" in
+  --config|--config=*|-c|-c=*)
+    has_config_arg=1
+    break
+    ;;
+  esac
+done
+
+if [ "$has_config_arg" -eq 0 ]; then
+  set -- --config=/config/settings.json "$@"
+fi
+
+exec filebrowser "$@"
